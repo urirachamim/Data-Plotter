@@ -4,12 +4,20 @@ import matplotlib.pyplot as plt
 from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
 
-# Function to load an Excel file
-def load_excel_file():
-    filepath = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx""*.csv")])
+# Global variable for dataframe
+df = None
+
+# Function to load an Excel or CSV file
+def load_file():
+    filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
+    filepath = filedialog.askopenfilename(filetypes=filetypes)
     if filepath:
         global df
-        df = pd.read_excel(filepath)
+        if filepath.endswith('.xlsx'):
+            df = pd.read_excel(filepath)
+        elif filepath.endswith('.csv'):
+            df = pd.read_csv(filepath)
+        
         listbox.delete(0, 'end')
         for col in df.columns:
             listbox.insert('end', col)
@@ -33,31 +41,11 @@ def save_configuration():
         messagebox.showerror("Error", "No parameters selected to save in the configuration.")
 
 # Function to load multiple saved configurations from files on user's computer
-def load_configuration():
-    filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
-    if filepaths:
-        all_parameters = set()  # Use a set to avoid duplicates
-        for filepath in filepaths:
-            with open(filepath, 'r') as file:
-                config = json.load(file)
-                all_parameters.update(config.get('parameters', []))  # Add parameters from each file
 
-        listbox.selection_clear(0, 'end')  # Clear any previous selections
-        for param in all_parameters:
-            try:
-                index = listbox.get(0, 'end').index(param)
-                listbox.select_set(index)
-            except ValueError:
-                continue
-
-        messagebox.showinfo("Success", f"Loaded configurations from {len(filepaths)} files.")
-    else:
-        messagebox.showerror("Error", "No configuration files selected.")
-
-# Function to plot selected parameters
+# Function to plot selected parameters from the listbox (direct plot option)
 def plot_selected_parameters():
     selected = listbox.curselection()
-    if selected:
+    if selected and df is not None:
         plt.figure()
         ax = plt.gca()
         for i in selected:
@@ -79,6 +67,48 @@ def plot_selected_parameters():
         ax.set_ylabel('Values')
         ax.set_title('Selected Parameters Plot')
         plt.show()
+    else:
+        messagebox.showerror("Error", "No parameters selected or no file loaded.")
+
+# Function to plot parameters from multiple configurations as separate charts (subplot for each configuration)
+def plot_from_configurations():
+    filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
+    if filepaths and df is not None:
+        fig, axs = plt.subplots(len(filepaths), 1, figsize=(8, len(filepaths) * 5), constrained_layout=True)
+
+        # If only one configuration is loaded, ensure axs is treated as an iterable
+        if len(filepaths) == 1:
+            axs = [axs]
+
+        for idx, filepath in enumerate(filepaths):
+            with open(filepath, 'r') as file:
+                config = json.load(file)
+                parameters = config.get('parameters', [])
+                
+                # Plot all selected parameters in one chart (subplot)
+                for param in parameters:
+                    if param in df.columns:
+                        col = df[param]
+                        max_value = col.max()
+                        min_value = col.min()
+                        avg_value = col.mean()
+
+                        axs[idx].plot(df[param], label=f'{param} (Max: {max_value:.2f}, Min: {min_value:.2f}, Avg: {avg_value:.2f})')
+
+                # Set the chart title to the configuration file name
+                axs[idx].set_title(f'Configuration: {os.path.basename(filepath)}')
+
+                # Set labels for each subplot
+                axs[idx].set_xlabel('Index')
+                axs[idx].set_ylabel('Values')
+
+                # Add legend to each subplot
+                axs[idx].legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
+
+        # Show the entire figure with all subplots
+        plt.show()
+    else:
+        messagebox.showerror("Error", "No configuration files selected or no data file loaded.")
 
 # Create the Tkinter window
 root = Tk()
@@ -91,8 +121,8 @@ root.geometry('800x600')
 # Create a font object with bold style
 bold_font = font.Font(weight='bold')
 
-# Add Load Excel Button with bold text
-load_button = Button(root, text="Load Excel File", command=load_excel_file, width=20, height=2, font=bold_font)
+# Add Load File Button with bold text
+load_button = Button(root, text="Load File", command=load_file, width=20, height=2, font=bold_font )
 load_button.pack(pady=10)
 
 # Add Listbox with specific width and height
@@ -103,13 +133,15 @@ listbox.pack(expand=True, fill='both', pady=10)
 save_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=2, font=bold_font)
 save_button.pack(pady=10)
 
-# Add Load Configuration Button
-load_button = Button(root, text="Load Configuration", command=load_configuration, width=20, height=2, font=bold_font)
-load_button.pack(pady=10)
 
-# Add Plot Button with bold text
-plot_button = Button(root, text="Generate", command=plot_selected_parameters, width=20, height=2, font=bold_font)
+
+# Add Plot from Listbox Button with bold text (for direct plotting)
+plot_button = Button(root, text="Plot Selected", command=plot_selected_parameters, width=20, height=2, font=bold_font)
 plot_button.pack(pady=10)
+
+# Add Plot from Configurations Button with bold text (for multi-chart plotting)
+plot_config_button = Button(root, text="Plot from Configurations", command=plot_from_configurations, width=20, height=2, font=bold_font)
+plot_config_button.pack(pady=10)
 
 # Run the application
 root.mainloop()
