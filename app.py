@@ -40,75 +40,166 @@ def save_configuration():
     else:
         messagebox.showerror("Error", "No parameters selected to save in the configuration.")
 
-# Function to load multiple saved configurations from files on user's computer
-
-# Function to plot selected parameters from the listbox (direct plot option)
 def plot_selected_parameters():
     selected = listbox.curselection()
     if selected and df is not None:
-        plt.figure()
-        ax = plt.gca()
+        fig, ax1 = plt.subplots()
+
+        # Determine if secondary axis is needed
+        needs_secondary_axis = False
+        primary_data = []
+        secondary_data = []
+        primary_params = []
+        secondary_params = []
+
+        # Collect data for plotting
         for i in selected:
             col = listbox.get(i)
-            max_value = df[col].max()
-            min_value = df[col].min()
-            avg_value = df[col].mean()
-            
-            # Plot the parameter with default values in the legend
-            ax.plot(df[col], label=f'{col}\nMax: {max_value:.2f}, Min: {min_value:.2f}, Avg: {avg_value:.2f}')
-        
-        # Set the legend on the right side of the plot with default font size 8
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
+            if col in df.columns:
+                data = df[col]
+                max_value = data.max()
+                min_value = data.min()
+                avg_value = data.mean()
 
-        # Set the default layout for the plot
-        plt.subplots_adjust(left=0.102, bottom=0.124, right=0.752, top=0.922, wspace=0.2, hspace=0.2)
+                # Check if data needs secondary axis
+                if max_value > 1000:
+                    secondary_data.append(data)
+                    secondary_params.append(col)
+                    needs_secondary_axis = True
+                else:
+                    primary_data.append(data)
+                    primary_params.append(col)
 
-        ax.set_xlabel('Index')
-        ax.set_ylabel('Values')
-        ax.set_title('Selected Parameters Plot')
+        # Create secondary axis only if needed
+        if needs_secondary_axis:
+            ax2 = ax1.twinx()
+        else:
+            ax2 = None
+
+        # Plot on primary Y-axis
+        for data, param in zip(primary_data, primary_params):
+            ax1.plot(data, label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
+
+        # Plot on secondary Y-axis
+        if ax2:
+            for data, param in zip(secondary_data, secondary_params):
+                ax2.plot(data, linestyle='--', label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
+
+            # Set labels for secondary axis
+            x_label = 'Index'
+            y_label_primary = 'Primary Parameters'
+            y_label_secondary = 'Secondary Parameters'
+
+            ax1.set_xlabel(x_label)
+            ax1.set_ylabel(y_label_primary)
+            ax2.set_ylabel(y_label_secondary)
+            ax1.set_title('Selected Parameters Plot')
+
+            # Set legends
+            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
+            ax2.legend(loc='center left', bbox_to_anchor=(1, 0.3), prop={'size': 8})
+        else:
+            # Set labels for primary axis only
+            x_label = 'Index'
+            y_label_primary = 'Primary Parameters'
+
+            ax1.set_xlabel(x_label)
+            ax1.set_ylabel(y_label_primary)
+            ax1.set_title('Selected Parameters Plot')
+
+            # Set legend
+            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
+
+        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
+
+      
     else:
         messagebox.showerror("Error", "No parameters selected or no file loaded.")
 
-# Function to plot parameters from multiple configurations as separate charts (subplot for each configuration)
+
 def plot_from_configurations():
     filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
     if filepaths and df is not None:
-        fig, axs = plt.subplots(len(filepaths), 1, figsize=(8, len(filepaths) * 5), constrained_layout=True)
+        num_configs = len(filepaths)
+        fig, axs = plt.subplots(num_configs, 1, figsize=(8, num_configs * 5), constrained_layout=True)
 
         # If only one configuration is loaded, ensure axs is treated as an iterable
-        if len(filepaths) == 1:
+        if num_configs == 1:
             axs = [axs]
 
         for idx, filepath in enumerate(filepaths):
+            ax = axs[idx]
+            ax2 = ax.twinx() if any(df[param].max() > 1000 for param in json.load(open(filepath)).get('parameters', [])) else None
+
             with open(filepath, 'r') as file:
                 config = json.load(file)
                 parameters = config.get('parameters', [])
                 
-                # Plot all selected parameters in one chart (subplot)
+                # Retrieve axis labels from config, with defaults
+                x_label = config.get('x_label', 'Index')
+                y_label_primary = config.get('y_label_primary', 'Primary Parameters')
+                y_label_secondary = config.get('y_label_secondary', 'Secondary Parameters')
+
+                primary_data = []
+                secondary_data = []
+                primary_params = []
+                secondary_params = []
+
                 for param in parameters:
                     if param in df.columns:
-                        col = df[param]
-                        max_value = col.max()
-                        min_value = col.min()
-                        avg_value = col.mean()
+                        data = df[param]
+                        max_value = data.max()
+                        min_value = data.min()
+                        avg_value = data.mean()
 
-                        axs[idx].plot(df[param], label=f'{param} (Max: {max_value:.2f}, Min: {min_value:.2f}, Avg: {avg_value:.2f})')
+                        # Separate data for primary and secondary Y-axes
+                        if max_value > 1000:
+                            secondary_data.append(data)
+                            secondary_params.append(param)
+                        else:
+                            primary_data.append(data)
+                            primary_params.append(param)
 
-                # Set the chart title to the configuration file name
-                axs[idx].set_title(f'Configuration: {os.path.basename(filepath)}')
+                # Plot on primary Y-axis
+                for data, param in zip(primary_data, primary_params):
+                    ax.plot(data, label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
 
-                # Set labels for each subplot
-                axs[idx].set_xlabel('Index')
-                axs[idx].set_ylabel('Values')
+                # Plot on secondary Y-axis
+                if secondary_data:
+                    for data, param in zip(secondary_data, secondary_params):
+                        ax2.plot(data, linestyle='--', label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
+                    # Set labels for secondary axis
+                    ax2.set_ylabel(y_label_secondary)
 
-                # Add legend to each subplot
-                axs[idx].legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
+                # Set labels for primary axis
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label_primary)
+                ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}')
 
-        # Show the entire figure with all subplots
+                # Set legends
+                ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
+                if secondary_data:
+                    ax2.legend(loc='center left', bbox_to_anchor=(1, 0.3), prop={'size': 8})
+
         plt.show()
+        
+        # Open the edit labels window after plotting
+        for idx, filepath in enumerate(filepaths):
+            with open(filepath, 'r') as file:
+                config = json.load(file)
+                x_label = config.get('x_label', 'Index')
+                y_label_primary = config.get('y_label_primary', 'Primary Parameters')
+                y_label_secondary = config.get('y_label_secondary', 'Secondary Parameters')
+                
+               
+              
     else:
         messagebox.showerror("Error", "No configuration files selected or no data file loaded.")
+
+
+
+
 
 # Create the Tkinter window
 root = Tk()
