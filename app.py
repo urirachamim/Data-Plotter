@@ -135,21 +135,25 @@ def plot_from_configurations():
             ax2 = ax.twinx() if any(df[param].max() > 1000 for param in json.load(open(filepath)).get('parameters', [])) else None
 
             with open(filepath, 'r') as file:
+                ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}')
                 config = json.load(file)
                 parameters = config.get('parameters', [])
                 
                 show_max = config.get('show_max', True)
                 show_min = config.get('show_min', True)
                 show_avg = config.get('show_avg', True)
+                
 
                 primary_data = []
                 secondary_data = []
                 primary_params = []
                 secondary_params = []
+                
 
                 for param in parameters:
                     if param in df.columns:
                         data = df[param]
+                        
 
                         if data.max() > 1000:
                             secondary_data.append(data)
@@ -157,9 +161,11 @@ def plot_from_configurations():
                         else:
                             primary_data.append(data)
                             primary_params.append(param)
+                            
 
                 # Plot on primary Y-axis
                 for data, param in zip(primary_data, primary_params):
+                    
                     label = param
                     if show_max:
                         label += f'\nMax: {data.max():.2f}'
@@ -167,10 +173,13 @@ def plot_from_configurations():
                         label += f'\nMin: {data.min():.2f}'
                     if show_avg:
                         label += f'\nAvg: {data.mean():.2f}'
+                        
                     ax.plot(data, label=label)
+                    
 
                 # Plot on secondary Y-axis
                 if secondary_data:
+                    
                     for data, param in zip(secondary_data, secondary_params):
                         label = param
                         if show_max:
@@ -194,7 +203,8 @@ root = Tk()
 root.title('Data Plotter')
 
 # Set the window size
-root.geometry('800x600')
+root.geometry('300x800')
+
 
 # Define the variables to track checkbox states
 show_max_var = tk.BooleanVar(value=True)
@@ -206,33 +216,35 @@ show_max_checkbox = tk.Checkbutton(root, text="Show Max", variable=show_max_var)
 show_min_checkbox = tk.Checkbutton(root, text="Show Min", variable=show_min_var)
 show_avg_checkbox = tk.Checkbutton(root, text="Show Avg", variable=show_avg_var)
 
-# Pack or grid the checkboxes (depending on your layout)
-show_max_checkbox.pack()
-show_min_checkbox.pack()
-show_avg_checkbox.pack()
+
 
 # Create a font object with bold style
 bold_font = font.Font(weight='bold')
 
 # Add Load File Button with bold text
-load_button = Button(root, text="Load File", command=load_file, width=20, height=2, font=bold_font)
+load_button = Button(root, text="Load File", command=load_file, width=20, height=2, font=bold_font,bg='lightblue')
 load_button.pack(pady=10)
 
 # Add Listbox with specific width and height
 listbox = Listbox(root, selectmode=MULTIPLE, width=50, height=15)
 listbox.pack(expand=True, fill='both', pady=10)
 
-# Add Save Configuration Button
-save_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=2, font=bold_font)
-save_button.pack(pady=10)
-
 # Add Plot from Listbox Button with bold text (for direct plotting)
-plot_button = Button(root, text="Plot Selected", command=plot_selected_parameters, width=20, height=2, font=bold_font)
-plot_button.pack(pady=10)
+plot_button = Button(root, text="Plot ", command=plot_selected_parameters, width=20, height=2, font=bold_font,bg='lightblue')
+plot_button.pack(pady=4)
+
+# Add Save Configuration Button
+save_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=2, font=bold_font,bg='lightblue')
+save_button.pack(pady=4)
 
 # Add Plot from Configurations Button with bold text (for multi-chart plotting)
-plot_config_button = Button(root, text="Plot from Configurations", command=plot_from_configurations, width=20, height=2, font=bold_font)
-plot_config_button.pack(pady=10)
+plot_config_button = Button(root, text="Plot Configurations", command=plot_from_configurations, width=20, height=2, font=bold_font,bg='lightblue')
+plot_config_button.pack(pady=4)
+
+# Pack or grid the checkboxes (depending on your layout)
+show_max_checkbox.pack(side='left', padx=5)
+show_min_checkbox.pack(side='left', padx=5)
+show_avg_checkbox.pack(side='left', padx=5)
 
 # Run the application
 root.mainloop()
