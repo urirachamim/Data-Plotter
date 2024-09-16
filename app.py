@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
+import tkinter as tk
 
 # Global variable for dataframe
 df = None
@@ -26,20 +27,27 @@ def load_file():
 def save_configuration():
     selected = listbox.curselection()
     if selected:
-        # Ask the user where to save the configuration
-        filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
-        if filepath:
-            config = {
-                'parameters': [listbox.get(i) for i in selected]
-            }
-            with open(filepath, 'w') as file:
-                json.dump(config, file)
-            messagebox.showinfo("Success", f"Configuration saved at {filepath}")
-        else:
-            messagebox.showerror("Error", "No file selected for saving configuration.")
-    else:
-        messagebox.showerror("Error", "No parameters selected to save in the configuration.")
+        config = {
+            'parameters': [],
+            'show_max': show_max_var.get(),
+            'show_min': show_min_var.get(),
+            'show_avg': show_avg_var.get()
+        }
+        
+        for i in selected:
+            param = listbox.get(i)
+            if param in df.columns:
+                config['parameters'].append(param)
 
+        # Save the configuration to a JSON file
+        file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+        if file_path:
+            with open(file_path, 'w') as file:
+                json.dump(config, file, indent=4)
+    else:
+        messagebox.showerror("Error", "No parameters selected.")
+
+# Function to plot selected parameters from the ListBox
 def plot_selected_parameters():
     selected = listbox.curselection()
     if selected and df is not None:
@@ -78,53 +86,47 @@ def plot_selected_parameters():
 
         # Plot on primary Y-axis
         for data, param in zip(primary_data, primary_params):
-            ax1.plot(data, label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
+            label = param
+            if show_max_var.get():
+                label += f'\nMax: {data.max():.2f}'
+            if show_min_var.get():
+                label += f'\nMin: {data.min():.2f}'
+            if show_avg_var.get():
+                label += f'\nAvg: {data.mean():.2f}'
+            ax1.plot(data, label=label)
 
         # Plot on secondary Y-axis
         if ax2:
             for data, param in zip(secondary_data, secondary_params):
-                ax2.plot(data, linestyle='--', label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
+                label = param
+                if show_max_var.get():
+                    label += f'\nMax: {data.max():.2f}'
+                if show_min_var.get():
+                    label += f'\nMin: {data.min():.2f}'
+                if show_avg_var.get():
+                    label += f'\nAvg: {data.mean():.2f}'
+                ax2.plot(data, linestyle='--', label=label)
 
             # Set labels for secondary axis
-            x_label = 'Index'
-            y_label_primary = 'Primary Parameters'
-            y_label_secondary = 'Secondary Parameters'
-
-            ax1.set_xlabel(x_label)
-            ax1.set_ylabel(y_label_primary)
-            ax2.set_ylabel(y_label_secondary)
             ax1.set_title('Selected Parameters Plot')
-
-            # Set legends
-            ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
-            ax2.legend(loc='center left', bbox_to_anchor=(1, 0.3), prop={'size': 8})
+            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.5), prop={'size': 8})
+            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.3), prop={'size': 8})
         else:
-            # Set labels for primary axis only
-            x_label = 'Index'
-            y_label_primary = 'Primary Parameters'
-
-            ax1.set_xlabel(x_label)
-            ax1.set_ylabel(y_label_primary)
             ax1.set_title('Selected Parameters Plot')
-
-            # Set legend
             ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
 
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
-
-      
     else:
         messagebox.showerror("Error", "No parameters selected or no file loaded.")
 
-
+# Function to plot parameters from configurations
 def plot_from_configurations():
     filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
     if filepaths and df is not None:
         num_configs = len(filepaths)
         fig, axs = plt.subplots(num_configs, 1, figsize=(8, num_configs * 5), constrained_layout=True)
 
-        # If only one configuration is loaded, ensure axs is treated as an iterable
         if num_configs == 1:
             axs = [axs]
 
@@ -136,10 +138,9 @@ def plot_from_configurations():
                 config = json.load(file)
                 parameters = config.get('parameters', [])
                 
-                # Retrieve axis labels from config, with defaults
-                x_label = config.get('x_label', 'Index')
-                y_label_primary = config.get('y_label_primary', 'Primary Parameters')
-                y_label_secondary = config.get('y_label_secondary', 'Secondary Parameters')
+                show_max = config.get('show_max', True)
+                show_min = config.get('show_min', True)
+                show_avg = config.get('show_avg', True)
 
                 primary_data = []
                 secondary_data = []
@@ -149,12 +150,8 @@ def plot_from_configurations():
                 for param in parameters:
                     if param in df.columns:
                         data = df[param]
-                        max_value = data.max()
-                        min_value = data.min()
-                        avg_value = data.mean()
 
-                        # Separate data for primary and secondary Y-axes
-                        if max_value > 1000:
+                        if data.max() > 1000:
                             secondary_data.append(data)
                             secondary_params.append(param)
                         else:
@@ -163,43 +160,34 @@ def plot_from_configurations():
 
                 # Plot on primary Y-axis
                 for data, param in zip(primary_data, primary_params):
-                    ax.plot(data, label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
+                    label = param
+                    if show_max:
+                        label += f'\nMax: {data.max():.2f}'
+                    if show_min:
+                        label += f'\nMin: {data.min():.2f}'
+                    if show_avg:
+                        label += f'\nAvg: {data.mean():.2f}'
+                    ax.plot(data, label=label)
 
                 # Plot on secondary Y-axis
                 if secondary_data:
                     for data, param in zip(secondary_data, secondary_params):
-                        ax2.plot(data, linestyle='--', label=f'{param} (Max: {data.max():.2f}, Min: {data.min():.2f}, Avg: {data.mean():.2f})')
-                    # Set labels for secondary axis
-                    ax2.set_ylabel(y_label_secondary)
+                        label = param
+                        if show_max:
+                            label += f'\nMax: {data.max():.2f}'
+                        if show_min:
+                            label += f'\nMin: {data.min():.2f}'
+                        if show_avg:
+                            label += f'\nAvg: {data.mean():.2f}'
+                        ax2.plot(data, linestyle='--', label=label)
 
-                # Set labels for primary axis
-                ax.set_xlabel(x_label)
-                ax.set_ylabel(y_label_primary)
-                ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}')
-
-                # Set legends
                 ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 8})
-                if secondary_data:
+                if ax2:
                     ax2.legend(loc='center left', bbox_to_anchor=(1, 0.3), prop={'size': 8})
 
         plt.show()
-        
-        # Open the edit labels window after plotting
-        for idx, filepath in enumerate(filepaths):
-            with open(filepath, 'r') as file:
-                config = json.load(file)
-                x_label = config.get('x_label', 'Index')
-                y_label_primary = config.get('y_label_primary', 'Primary Parameters')
-                y_label_secondary = config.get('y_label_secondary', 'Secondary Parameters')
-                
-               
-              
     else:
-        messagebox.showerror("Error", "No configuration files selected or no data file loaded.")
-
-
-
-
+        messagebox.showerror("Error", "No configuration files selected or no file loaded.")
 
 # Create the Tkinter window
 root = Tk()
@@ -208,12 +196,26 @@ root.title('Data Plotter')
 # Set the window size
 root.geometry('800x600')
 
+# Define the variables to track checkbox states
+show_max_var = tk.BooleanVar(value=True)
+show_min_var = tk.BooleanVar(value=True)
+show_avg_var = tk.BooleanVar(value=True)
+
+# Create checkboxes and link them to the variables
+show_max_checkbox = tk.Checkbutton(root, text="Show Max", variable=show_max_var)
+show_min_checkbox = tk.Checkbutton(root, text="Show Min", variable=show_min_var)
+show_avg_checkbox = tk.Checkbutton(root, text="Show Avg", variable=show_avg_var)
+
+# Pack or grid the checkboxes (depending on your layout)
+show_max_checkbox.pack()
+show_min_checkbox.pack()
+show_avg_checkbox.pack()
 
 # Create a font object with bold style
 bold_font = font.Font(weight='bold')
 
 # Add Load File Button with bold text
-load_button = Button(root, text="Load File", command=load_file, width=20, height=2, font=bold_font )
+load_button = Button(root, text="Load File", command=load_file, width=20, height=2, font=bold_font)
 load_button.pack(pady=10)
 
 # Add Listbox with specific width and height
@@ -223,8 +225,6 @@ listbox.pack(expand=True, fill='both', pady=10)
 # Add Save Configuration Button
 save_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=2, font=bold_font)
 save_button.pack(pady=10)
-
-
 
 # Add Plot from Listbox Button with bold text (for direct plotting)
 plot_button = Button(root, text="Plot Selected", command=plot_selected_parameters, width=20, height=2, font=bold_font)
