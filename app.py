@@ -36,13 +36,13 @@ def update_listboxes():
 def save_primary_selection():
     global primary_selections
     primary_selections = [primary_listbox.get(i) for i in primary_listbox.curselection()]
-    messagebox.showinfo("Info", "Primary selections saved.")
+    #messagebox.showinfo("Info", "parameters saved.")
 
 # Function to save selected parameters from the secondary ListBox
 def save_secondary_selection():
     global secondary_selections
     secondary_selections = [secondary_listbox.get(i) for i in secondary_listbox.curselection()]
-    messagebox.showinfo("Info", "Secondary selections saved.")
+    #messagebox.showinfo("Info", "parameters saved.")
 
 # Function to save the configuration to a file
 def save_configuration():
@@ -57,9 +57,9 @@ def save_configuration():
     if file_path:
         with open(file_path, 'w') as file:
             json.dump(config, file, indent=4)
-        messagebox.showinfo("Info", "Configuration saved.")
-    else:
-        messagebox.showerror("Error", "Configuration not saved.")
+        messagebox.showinfo("Info", "saved.")
+   # else:
+        #messagebox.showerror("Error", "Configuration not saved.")
 
 # Function to plot selected parameters from both ListBoxes
 def plot_selected_parameters():
@@ -93,16 +93,16 @@ def plot_selected_parameters():
                     ax2.plot(data, linestyle='--', label=label)
 
             ax1.set_title('Selected Parameters Plot')
-            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.5), prop={'size': 8})
-            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.3), prop={'size': 8})
+            ax1.legend(loc='center right', bbox_to_anchor=(-0.02, 0.7), prop={'size': 8})
+            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
         else:
             ax1.set_title('Selected Parameters Plot')
-            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.5), prop={'size': 8})
+            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
 
-        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
+        plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
     else:
-        messagebox.showerror("Error", "No file loaded.")
+        messagebox.showerror("Error", "No excel file loaded.")
 
 # Function to plot parameters from configurations
 def plot_from_configurations():
@@ -181,10 +181,10 @@ root = tk.Tk()
 root.title('Data Plotter')
 
 # Set the window size
-root.geometry('300x800')
+root.geometry('400x800')
 
 # Create a smaller font object
-small_font = font.Font(size=10)
+small_font = font.Font(size=10,weight="bold")
 
 # Define the variables to track checkbox states
 show_max_var = tk.BooleanVar(value=True)
@@ -192,37 +192,44 @@ show_min_var = tk.BooleanVar(value=True)
 show_avg_var = tk.BooleanVar(value=True)
 
 # Create checkboxes and link them to the variables
-show_max_checkbox = tk.Checkbutton(root, text="Show Max", variable=show_max_var, font=small_font)
-show_min_checkbox = tk.Checkbutton(root, text="Show Min", variable=show_min_var, font=small_font)
-show_avg_checkbox = tk.Checkbutton(root, text="Show Avg", variable=show_avg_var, font=small_font)
+show_max_checkbox = tk.Checkbutton(root, text=" Max", variable=show_max_var, font=small_font)
+show_min_checkbox = tk.Checkbutton(root, text=" Min", variable=show_min_var, font=small_font)
+show_avg_checkbox = tk.Checkbutton(root, text=" Avg", variable=show_avg_var, font=small_font)
 
 # Add buttons with smaller dimensions
-load_button = Button(root, text="Load File", command=load_file, width=15, height=1, font=small_font, bg='lightblue')
+load_button = Button(root, text="Load File",command=load_file, width=15, height=1, font=small_font, bg='lightblue')
 load_button.pack(pady=5)
 
-primary_listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=40, height=10, bg='lightyellow')
+primary_listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=40, height=10, bg='white')
 primary_listbox.pack(expand=True, fill='both', pady=5)
-primary_label = tk.Label(root, text="Primary Axis Parameters", font=small_font)
-primary_label.pack()
 
-secondary_listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=40, height=10, bg='lightgreen')
-secondary_listbox.pack(expand=True, fill='both', pady=5)
-secondary_label = tk.Label(root, text="Secondary Axis Parameters", font=small_font)
-secondary_label.pack()
+#primary_label = tk.Label(root, text=" Axis 1 ", font=small_font)
+#primary_label.pack()
 
-save_primary_button = Button(root, text="Save Primary Selection", command=save_primary_selection, width=20, height=1, font=small_font, bg='lightcoral')
+save_primary_button = Button(root, text="Save Axis 1 ", command=save_primary_selection, width=20, height=1, font=small_font, bg='orange')
 save_primary_button.pack(pady=5)
 
-save_secondary_button = Button(root, text="Save Secondary Selection", command=save_secondary_selection, width=20, height=1, font=small_font, bg='lightcoral')
-save_secondary_button.pack(pady=5)
+secondary_listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=40, height=10, bg='white')
+secondary_listbox.pack(expand=True, fill='both', pady=5)
 
-save_config_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=1, font=small_font, bg='lightcoral')
-save_config_button.pack(pady=5)
+#secondary_label = tk.Label(root, text=" Axis 2", font=small_font)
+#secondary_label.pack()
 
-plot_button = Button(root, text="Plot", command=plot_selected_parameters, width=20, height=1, font=small_font, bg='lightgreen')
+
+
+save_secondary_button = Button(root, text="Save Axis 2", command=save_secondary_selection, width=20, height=1, font=small_font, bg='orange')
+save_secondary_button.pack(pady=5 )
+
+
+plot_button = Button(root, text="Plot parameter", command=plot_selected_parameters, width=20, height=1, font=small_font, bg='lightblue')
 plot_button.pack(pady=5)
 
-plot_config_button = Button(root, text="Plot saved Configuration", command=plot_from_configurations, width=20, height=1, font=small_font, bg='lightgreen')
+save_config_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=1, font=small_font, bg='lightblue')
+save_config_button.pack(pady=5)
+
+
+
+plot_config_button = Button(root, text="Load saved plot", command=plot_from_configurations, width=20, height=1, font=small_font, bg='lightblue')
 plot_config_button.pack(pady=5)
 
 show_max_checkbox.pack()
