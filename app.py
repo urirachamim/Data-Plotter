@@ -97,7 +97,7 @@ def plot_selected_parameters():
                     ax2.plot(data, linestyle='--', label=label)
 
             ax1.set_title('Parameters Plot')
-            ax1.legend(loc='center right', bbox_to_anchor=(-0.02, 0.7), prop={'size': 8})
+            ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
             ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
         else:
             ax1.set_title('Selected Parameters Plot')
@@ -181,13 +181,13 @@ def plot_from_configurations():
                     # Plot secondary parameters if they exist
                     if ax2 and secondary_data:
                         for data, label in zip(secondary_data, secondary_labels):
-                            ax2.plot(data, linestyle='--', label=label)
+                            ax2.plot(data,linestyle='--', label=label)
                     elif ax2:
                         messagebox.showerror("Error", f"No valid secondary data found for twin axis in {filepath}")
 
                     # Set titles and legends for each subplot
                     ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}')
-                    ax.legend(loc='center right', bbox_to_anchor=(-0.02, 0.7), prop={'size': 8})
+                    ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
                     
                     
                     if ax2:
