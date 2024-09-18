@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
 import tkinter as tk
+import itertools
+import matplotlib.pyplot as plt
 
 # Global variables for dataframe and saved selections
 df = None
@@ -116,19 +118,18 @@ def plot_from_configurations():
         filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
         if filepaths:
             num_configs = len(filepaths)
-            fig, axs = plt.subplots()
+            fig, axs = plt.subplots(num_configs, 1, figsize=(8, num_configs * 5), constrained_layout=True)
 
             if num_configs == 1:
-                axs = [axs]  # Ensure axs is always a list
+                axs = [axs]  # Ensure axs is always a list even for one subplot
+
+            # Define color cycles for primary and secondary axes
+            primary_colors = itertools.cycle(plt.cm.tab10.colors)  # Color cycle for primary axis
+            secondary_colors = itertools.cycle(plt.cm.Set2.colors)  # Color cycle for secondary axis
 
             # Iterate through each configuration file
             for idx, filepath in enumerate(filepaths):
                 ax = axs[idx]
-                
-                
-                
-                create_secondary_axis = any(df[param].max() > 1000 for param in json.load(open(filepath)).get('primary_parameters', []) if param in df.columns) 
-                ax2 = ax.twinx() if create_secondary_axis else None
 
                 with open(filepath, 'r') as file:
                     config = json.load(file)
@@ -171,36 +172,39 @@ def plot_from_configurations():
                             secondary_labels.append(label)
                             secondary_data.append(data)
 
-                    # Plot the primary parameters
+                    # Plot the primary parameters on ax
                     if primary_data:
                         for data, label in zip(primary_data, primary_labels):
-                            ax.plot(data, label=label)
+                            color = next(primary_colors)  # Get the next color for primary axis
+                            ax.plot(data, label=label, color=color)
                     else:
                         messagebox.showerror("Error", f"No valid primary data found in {filepath}")
 
-                    # Plot secondary parameters if they exist
-                    if ax2 and secondary_data:
+                    # Create and plot on secondary axis if secondary parameters exist
+                    if secondary_data:
+                        ax2 = ax.twinx()  # Always create twin axis if secondary data exists
                         for data, label in zip(secondary_data, secondary_labels):
-                            ax2.plot(data,linestyle='--', label=label)
-                    elif ax2:
-                        messagebox.showerror("Error", f"No valid secondary data found for twin axis in {filepath}")
+                            color = next(secondary_colors)  # Get the next color for secondary axis
+                            ax2.plot(data, linestyle='--', label=label, color=color)
 
-                    # Set titles and legends for each subplot
-                    ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}')
-                    ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
-                    
-                    
-                    if ax2:
+                        # Add legends for both axes
+                        ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
                         ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+                    else:
+                        ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
 
-            # Apply plot design adjustments
-            plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
+                    # Set the title for each subplot
+                    ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=10)
 
+            # Adjust the layout to prevent overlap
+            plt.tight_layout()
             plt.show()
+
         else:
             messagebox.showerror("Error", "No configuration files selected.")
     else:
         messagebox.showerror("Error", "No file loaded.")
+
 
 
 
