@@ -5,12 +5,16 @@ from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
 import tkinter as tk
 import itertools
-import matplotlib.pyplot as plt
+
+
+
 
 # Global variables for dataframe and saved selections
 df = None
 primary_selections = []
 secondary_selections = []
+
+
 
 # Function to load an Excel or CSV file
 def load_file():
@@ -67,12 +71,30 @@ def save_configuration():
    # else:
         #messagebox.showerror("Error", "Configuration not saved.")
 
+
+def convert_time_to_decimal(time_str):
+    hours, minutes, seconds, milliseconds = map(int, time_str.split(':'))
+    total_minutes = hours * 60 + minutes + seconds / 60 + milliseconds / 60000
+    return total_minutes 
+
+
+
+
 # Function to plot selected parameters from both ListBoxes
 def plot_selected_parameters():
     if df is not None:
+        # Select the x-axis parameter (You can set a default or allow users to choose)
+        x_param = 'Time'  # Replace with your desired default x-axis column name
+        if x_param not in df.columns:
+            messagebox.showerror("Error", f"{x_param} not found in data.")
+            return
+        x_data = df[x_param].apply(convert_time_to_decimal)
+        
+
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx() if secondary_selections else None
 
+        # Plot primary parameters
         for param in primary_selections:
             if param in df.columns:
                 data = df[param]
@@ -83,7 +105,7 @@ def plot_selected_parameters():
                     label += f'\nMin: {data.min():.2f}'
                 if show_avg_var.get():
                     label += f'\nAvg: {data.mean():.2f}'
-                ax1.plot(data, label=label)
+                ax1.plot(x_data, data, label=label)  # Use x_data for the x-axis
 
         if ax2:
             for param in secondary_selections:
@@ -96,14 +118,21 @@ def plot_selected_parameters():
                         label += f'\nMin: {data.min():.2f}'
                     if show_avg_var.get():
                         label += f'\nAvg: {data.mean():.2f}'
-                    ax2.plot(data, linestyle='--', label=label)
+                    ax2.plot(x_data, data, linestyle='--', label=label)  # Use x_data for the x-axis
 
-            ax1.set_title('Parameters Plot')
+            # Add grid to both y-axes
+            ax1.grid(True)
+            ax2.grid(True)  # Add grid for the secondary y-axis
+
+            ax1.set_title('Plot')
             ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
             ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
         else:
-            ax1.set_title('Selected Parameters Plot')
+            ax1.grid(True)  # Add grid for the single y-axis plot
+            ax1.set_title('Plot')
             ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+            
+            plt.xlabel('Time')
 
         plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
@@ -112,9 +141,9 @@ def plot_selected_parameters():
 
 
 
+
 def plot_from_configurations():
     if df is not None:
-        
         filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
         if filepaths:
             num_configs = len(filepaths)
@@ -143,6 +172,13 @@ def plot_from_configurations():
                     primary_labels = []
                     secondary_data = []
                     secondary_labels = []
+
+                    # Select x-axis parameter (default or from config)
+                    x_param = config.get('x_axis', 'Time')
+                    if x_param not in df.columns:
+                        messagebox.showerror("Error", f"{x_param} not found in data.")
+                        return
+                    x_data = df[x_param].apply(convert_time_to_decimal)
 
                     # Process primary parameters
                     for param in primary_params:
@@ -176,7 +212,7 @@ def plot_from_configurations():
                     if primary_data:
                         for data, label in zip(primary_data, primary_labels):
                             color = next(primary_colors)  # Get the next color for primary axis
-                            ax.plot(data, label=label, color=color)
+                            ax.plot(x_data, data, label=label, color=color)  # Use x_data for x-axis
                     else:
                         messagebox.showerror("Error", f"No valid primary data found in {filepath}")
 
@@ -185,25 +221,26 @@ def plot_from_configurations():
                         ax2 = ax.twinx()  # Always create twin axis if secondary data exists
                         for data, label in zip(secondary_data, secondary_labels):
                             color = next(secondary_colors)  # Get the next color for secondary axis
-                            ax2.plot(data, linestyle='--', label=label, color=color)
+                            ax2.plot(x_data, data, linestyle='--', label=label, color=color)  # Use x_data for x-axis
 
-                        # Add legends for both axes
+                        # Add grids and legends for both axes
+                        ax.grid(True)
+                        ax2.grid(True)
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
                         ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
                     else:
+                        ax.grid(True)
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
-
+                        plt.xlabel('Time')
                     # Set the title for each subplot
                     ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=10)
 
             # Adjust the layout to prevent overlap
             plt.tight_layout()
             plt.show()
-
-        else:
-            messagebox.showerror("Error", "No configuration files selected.")
     else:
-        messagebox.showerror("Error", "No file loaded.")
+        messagebox.showerror("Error", "No excel file loaded.")
+
 
 
 
