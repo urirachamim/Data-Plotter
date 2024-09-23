@@ -5,8 +5,9 @@ from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
 import tkinter as tk
 import itertools
-
-
+###############################################################################
+# command to build exe -> pyinstaller --onefile --windowed --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=matplotlib.backends.backend_agg --hidden-import=matplotlib._pylab_helpers app.py
+##############################################################################
 
 
 # Global variables for dataframe and saved selections
@@ -123,19 +124,23 @@ def plot_selected_parameters():
             # Add grid to both y-axes
             ax1.grid(True)
             ax2.grid(True)  # Add grid for the secondary y-axis
+            
 
             ax1.set_title('Plot')
+            ax1.set_xlabel('Time [Min]')
             ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
             ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+            
         else:
             ax1.grid(True)  # Add grid for the single y-axis plot
             ax1.set_title('Plot')
+            ax1.set_xlabel('Time [Min]')
             ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
             
-            plt.xlabel('Time')
 
         plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
+        
     else:
         messagebox.showerror("Error", "No excel file loaded.")
 
@@ -226,12 +231,15 @@ def plot_from_configurations():
                         # Add grids and legends for both axes
                         ax.grid(True)
                         ax2.grid(True)
+                        ax.set_xlabel('Time [Min]')
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
                         ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+                        
                     else:
                         ax.grid(True)
+                        ax.set_xlabel('Time [Min]')
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
-                        plt.xlabel('Time')
+                       
                     # Set the title for each subplot
                     ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=10)
 
