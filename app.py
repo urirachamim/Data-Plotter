@@ -5,6 +5,7 @@ from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
 import tkinter as tk
 import itertools
+
 ###############################################################################
 # command to build exe -> pyinstaller --onefile --windowed --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=matplotlib.backends.backend_agg --hidden-import=matplotlib._pylab_helpers app.py
 ##############################################################################
@@ -72,25 +73,40 @@ def save_configuration():
    # else:
         #messagebox.showerror("Error", "Configuration not saved.")
 
+import matplotlib.pyplot as plt
 
-def convert_time_to_decimal(time_str):
-    hours, minutes, seconds, milliseconds = map(int, time_str.split(':'))
-    total_minutes = hours * 60 + minutes + seconds / 60 + milliseconds / 60000
-    return total_minutes 
-
-
-
+def convert_time_to_seconds(time_str):
+    # Split the time string into parts
+    parts = time_str.split(':')
+    if len(parts) == 4:  # HH:MM:SS:MS format
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = int(parts[2])
+        milliseconds = int(parts[3])
+    elif len(parts) == 3:  # HH:MM:SS format, assuming no milliseconds
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = int(parts[2])
+        milliseconds = 0
+    else:
+        raise ValueError(f"Unexpected time format: {time_str}")
+    
+    # Calculate total seconds
+    total_seconds = (hours * 3600) + (minutes * 60) + seconds + (milliseconds / 1000)
+    return total_seconds
 
 # Function to plot selected parameters from both ListBoxes
 def plot_selected_parameters():
     if df is not None:
-        # Select the x-axis parameter (You can set a default or allow users to choose)
-        x_param = 'Time'  # Replace with your desired default x-axis column name
-        if x_param not in df.columns:
-            messagebox.showerror("Error", f"{x_param} not found in data.")
-            return
-        x_data = df[x_param].apply(convert_time_to_decimal)
+        # Example time log, replace with your actual data
+        time_log = df['Time']  # Assuming 'Time' is the column in your DataFrame
+
+        # Convert time log to seconds using the defined function
+        x_data = [convert_time_to_seconds(time_str) for time_str in time_log]
         
+        # Determine if the log length is in seconds or minutes
+        log_length_in_seconds = x_data[-1]  # Last entry to determine log length
+        is_minute = log_length_in_seconds > 60  # Assuming log length > 60 seconds means it's in minutes
 
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx() if secondary_selections else None
@@ -124,19 +140,17 @@ def plot_selected_parameters():
             # Add grid to both y-axes
             ax1.grid(True)
             ax2.grid(True)  # Add grid for the secondary y-axis
-            
 
             ax1.set_title('Plot')
-            ax1.set_xlabel('Time [Min]')
+            ax1.set_xlabel(f'Time [{ "Min" if is_minute else "Sec" }]')  # Set xlabel based on log length
             ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
             ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
             
         else:
             ax1.grid(True)  # Add grid for the single y-axis plot
             ax1.set_title('Plot')
-            ax1.set_xlabel('Time [Min]')
+            ax1.set_xlabel(f'Time [{ "Min" if is_minute else "Sec" }]')  # Set xlabel based on log length
             ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
-            
 
         plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
@@ -144,11 +158,8 @@ def plot_selected_parameters():
     else:
         messagebox.showerror("Error", "No excel file loaded.")
 
-
-
-
 def plot_from_configurations():
-    if df is not None:
+    if df is not None:  # Check if DataFrame is loaded
         filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
         if filepaths:
             num_configs = len(filepaths)
@@ -173,19 +184,20 @@ def plot_from_configurations():
                     show_min = config.get('show_min', True)
                     show_avg = config.get('show_avg', True)
 
-                    primary_data = []
-                    primary_labels = []
-                    secondary_data = []
-                    secondary_labels = []
-
                     # Select x-axis parameter (default or from config)
                     x_param = config.get('x_axis', 'Time')
                     if x_param not in df.columns:
                         messagebox.showerror("Error", f"{x_param} not found in data.")
                         return
-                    x_data = df[x_param].apply(convert_time_to_decimal)
+                    x_data = df[x_param].apply(convert_time_to_seconds)  # Ensure x_data is processed correctly
 
-                    # Process primary parameters
+                    # Determine if the log length is in seconds or minutes
+                    log_length_in_seconds = x_data.iloc[-1]  # Last entry to determine log length
+                    is_minute = log_length_in_seconds > 60  # Assuming log length > 60 seconds means it's in minutes
+
+                    # Process and store data for primary parameters
+                    primary_data = []
+                    primary_labels = []
                     for param in primary_params:
                         if param in df.columns:
                             data = df[param]
@@ -199,20 +211,6 @@ def plot_from_configurations():
                             primary_labels.append(label)
                             primary_data.append(data)
 
-                    # Process secondary parameters
-                    for param in secondary_params:
-                        if param in df.columns:
-                            data = df[param]
-                            label = param
-                            if show_max:
-                                label += f'\nMax: {data.max():.2f}'
-                            if show_min:
-                                label += f'\nMin: {data.min():.2f}'
-                            if show_avg:
-                                label += f'\nAvg: {data.mean():.2f}'
-                            secondary_labels.append(label)
-                            secondary_data.append(data)
-
                     # Plot the primary parameters on ax
                     if primary_data:
                         for data, label in zip(primary_data, primary_labels):
@@ -222,7 +220,22 @@ def plot_from_configurations():
                         messagebox.showerror("Error", f"No valid primary data found in {filepath}")
 
                     # Create and plot on secondary axis if secondary parameters exist
-                    if secondary_data:
+                    if secondary_params:
+                        secondary_data = []
+                        secondary_labels = []
+                        for param in secondary_params:
+                            if param in df.columns:
+                                data = df[param]
+                                label = param
+                                if show_max:
+                                    label += f'\nMax: {data.max():.2f}'
+                                if show_min:
+                                    label += f'\nMin: {data.min():.2f}'
+                                if show_avg:
+                                    label += f'\nAvg: {data.mean():.2f}'
+                                secondary_labels.append(label)
+                                secondary_data.append(data)
+
                         ax2 = ax.twinx()  # Always create twin axis if secondary data exists
                         for data, label in zip(secondary_data, secondary_labels):
                             color = next(secondary_colors)  # Get the next color for secondary axis
@@ -231,23 +244,25 @@ def plot_from_configurations():
                         # Add grids and legends for both axes
                         ax.grid(True)
                         ax2.grid(True)
-                        ax.set_xlabel('Time [Min]')
+                        ax.set_xlabel(f'Time [{"Min" if is_minute else "Sec"}]')  # Set xlabel based on log length
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
                         ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
-                        
                     else:
                         ax.grid(True)
-                        ax.set_xlabel('Time [Min]')
+                        ax.set_xlabel(f'Time [{"Min" if is_minute else "Sec"}]')  # Set xlabel based on log length
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
-                       
+
                     # Set the title for each subplot
                     ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=10)
 
             # Adjust the layout to prevent overlap
             plt.tight_layout()
             plt.show()
+        else:
+            messagebox.showerror("Error", "No JSON files selected.")
     else:
-        messagebox.showerror("Error", "No excel file loaded.")
+        messagebox.showerror("Error", "No data loaded.")
+
 
 
 
