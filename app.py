@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from tkinter import Tk, Button, Listbox, MULTIPLE, font, filedialog, messagebox
+from tkinter import Tk,Label,Entry, Button, Listbox, MULTIPLE, font, filedialog, messagebox
 import json
 import tkinter as tk
 import itertools
@@ -20,7 +20,7 @@ secondary_selections = []
 
 # Function to load an Excel or CSV file
 def load_file():
-    filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
+    filetypes = [("All files", "*.*")]
     filepath = filedialog.askopenfilename(filetypes=filetypes)
     if filepath:
         global df
@@ -111,6 +111,8 @@ def plot_selected_parameters():
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx() if secondary_selections else None
 
+        chart_title = chart_title_entry.get() if chart_title_entry.get() else "Default Title"  # Fallback to default
+        
         # Plot primary parameters
         for param in primary_selections:
             if param in df.columns:
@@ -139,17 +141,17 @@ def plot_selected_parameters():
 
             # Add grid to both y-axes
             ax1.grid(True)
-            ax2.grid(True)  # Add grid for the secondary y-axis
+            #ax2.grid(True)  # Add grid for the secondary y-axis
 
-            ax1.set_title('Plot')
-            ax1.set_xlabel(f'Time [{ "Min" if is_minute else "Sec" }]')  # Set xlabel based on log length
+            ax1.set_title(chart_title)
+            ax1.set_xlabel(f'Time [{ "Sec" if is_minute else "Sec" }]')  # Set xlabel based on log length
             ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
             ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
             
         else:
             ax1.grid(True)  # Add grid for the single y-axis plot
             ax1.set_title('Plot')
-            ax1.set_xlabel(f'Time [{ "Min" if is_minute else "Sec" }]')  # Set xlabel based on log length
+            ax1.set_xlabel(f'Time [{ "Sec" if is_minute else "Sec" }]')  # Set xlabel based on log length
             ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
 
         plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
@@ -243,13 +245,13 @@ def plot_from_configurations():
 
                         # Add grids and legends for both axes
                         ax.grid(True)
-                        ax2.grid(True)
-                        ax.set_xlabel(f'Time [{"Min" if is_minute else "Sec"}]')  # Set xlabel based on log length
+                        #ax2.grid(True)
+                        ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]')  # Set xlabel based on log length
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
                         ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
                     else:
                         ax.grid(True)
-                        ax.set_xlabel(f'Time [{"Min" if is_minute else "Sec"}]')  # Set xlabel based on log length
+                        ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]')  # Set xlabel based on log length
                         ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
 
                     # Set the title for each subplot
@@ -269,15 +271,16 @@ def plot_from_configurations():
 
 
 
-# Create the Tkinter window
 root = tk.Tk()
 root.title('Data Plotter')
 
 # Set the window size
 root.geometry('400x800')
 
+
+
 # Create a smaller font object
-small_font = font.Font(size=10,weight="bold")
+small_font = font.Font(size=10, weight="bold")
 
 # Define the variables to track checkbox states
 show_max_var = tk.BooleanVar(value=True)
@@ -290,43 +293,54 @@ show_min_checkbox = tk.Checkbutton(root, text=" Min", variable=show_min_var, fon
 show_avg_checkbox = tk.Checkbutton(root, text=" Avg", variable=show_avg_var, font=small_font)
 
 # Add buttons with smaller dimensions
-load_button = Button(root, text="Load File",command=load_file, width=15, height=1, font=small_font, bg='lightblue')
+load_button = Button(root, text="Load File", command=load_file, width=15, height=1, font=small_font, bg='lightblue')
 load_button.pack(pady=5)
 
-primary_listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=40, height=10, bg='white')
-primary_listbox.pack(expand=True, fill='both', pady=5)
+primary_frame = tk.Frame(root)
+primary_frame.pack(pady=5)
 
-#primary_label = tk.Label(root, text=" Axis 1 ", font=small_font)
-#primary_label.pack()
+# Primary Listbox and Save Button
+primary_listbox = tk.Listbox(primary_frame, selectmode=tk.MULTIPLE, width=30, height=10, bg='white')
+primary_listbox.pack(side=tk.RIGHT, expand=True, fill='both')
 
-save_primary_button = Button(root, text="Save Axis 1 ", command=save_primary_selection, width=20, height=1, font=small_font, bg='orange')
-save_primary_button.pack(pady=5)
+save_primary_button = Button(primary_frame, text="Save Axis 1", command=save_primary_selection, width=15, height=1, font=small_font, bg='orange')
+save_primary_button.pack(side=tk.LEFT, padx=5)
 
-secondary_listbox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=40, height=10, bg='white')
-secondary_listbox.pack(expand=True, fill='both', pady=5)
+# Secondary Listbox and Save Button
+secondary_frame = tk.Frame(root)
+secondary_frame.pack(pady=5)
 
-#secondary_label = tk.Label(root, text=" Axis 2", font=small_font)
-#secondary_label.pack()
+# Secondary Listbox
+secondary_listbox = tk.Listbox(secondary_frame, selectmode=tk.MULTIPLE, width=30, height=10, bg='white')
+secondary_listbox.pack(side=tk.RIGHT, expand=True, fill='both')
 
+save_secondary_button = Button(secondary_frame, text="Save Axis 2", command=save_secondary_selection, width=15, height=1, font=small_font, bg='orange')
+save_secondary_button.pack(side=tk.LEFT, padx=5)
 
+# Clear selection Button
+clear_selection_button = Button(root, text="Clear saved axis", command=Clear_selection, width=20, height=1, font=small_font, bg='red')
+clear_selection_button.pack(pady=5)
 
-save_secondary_button = Button(root, text="Save Axis 2", command=save_secondary_selection, width=20, height=1, font=small_font, bg='orange')
-save_secondary_button.pack(pady=5 )
+# Create and place the label and entry box for chart title
+chart_title_label = Label(root, text="Enter Chart Title:")
+chart_title_label.pack(pady=10)  # Adjust padding for spacing
 
-Clear_selection_button = Button(root,text="Clear saved axis", command=Clear_selection,width=20, height=1, font=small_font, bg='red')
-Clear_selection_button.pack(pady=5)
+chart_title_entry = Entry(root, width=40)  # Adjust the width as needed
+chart_title_entry.pack(pady=5)
 
-plot_button = Button(root, text="Plot parameter", command=plot_selected_parameters, width=20, height=1, font=small_font, bg='lightblue')
+# Plot parameter Button
+plot_button = Button(root, text="Create Chart", command=plot_selected_parameters, width=20, height=1, font=small_font, bg='lightgreen')
 plot_button.pack(pady=5)
 
-save_config_button = Button(root, text="Save Configuration", command=save_configuration, width=20, height=1, font=small_font, bg='lightblue')
+# Save Configuration Button
+save_config_button = Button(root, text="Save Chart Config", command=save_configuration, width=20, height=1, font=small_font, bg='lightblue')
 save_config_button.pack(pady=5)
 
-
-
-plot_config_button = Button(root, text="Load saved plot", command=plot_from_configurations, width=20, height=1, font=small_font, bg='lightblue')
+# Load saved plot Button
+plot_config_button = Button(root, text="Load Chart", command=plot_from_configurations, width=20, height=1, font=small_font, bg='lightblue')
 plot_config_button.pack(pady=5)
 
+# Place the checkboxes at the bottom
 show_max_checkbox.pack()
 show_min_checkbox.pack()
 show_avg_checkbox.pack()
