@@ -5,7 +5,7 @@ from tkinter import Tk,Label,Entry, Button, Listbox, MULTIPLE, font, filedialog,
 import json
 import tkinter as tk
 import itertools
-
+from tkinter import ttk
 ###############################################################################
 # command to build exe -> pyinstaller --onefile --windowed --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=matplotlib.backends.backend_agg --hidden-import=matplotlib._pylab_helpers app.py
 ##############################################################################
@@ -15,6 +15,8 @@ import itertools
 df = None
 primary_selections = []
 secondary_selections = []
+green_items = []
+green_items2 = []
 
 
 
@@ -42,28 +44,62 @@ def update_listboxes():
 
 # Function to save selected parameters from the primary ListBox
 def save_primary_selection():
-    global primary_selections
+   
+    global primary_selections, green_items2
     primary_selections = [primary_listbox.get(i) for i in primary_listbox.curselection()]
-    #messagebox.showinfo("Info", "parameters saved.")
+    green_items2.clear()  # Clear the list before adding new green items
+
+    # Color the selected items green and store their indices
+    for i in primary_listbox.curselection():
+        primary_listbox.itemconfig(i, {'fg': 'green'})  # Color selected items green
+        green_items2.append(i)  # Store the index of green-colored items
+
+
+    
 
 # Function to save selected parameters from the secondary ListBox
 def save_secondary_selection():
-    global secondary_selections
+    global secondary_selections, green_items
     secondary_selections = [secondary_listbox.get(i) for i in secondary_listbox.curselection()]
-    #messagebox.showinfo("Info", "parameters saved.")
-def Clear_selection():
-    global primary_selections
-    global secondary_selections
+    green_items.clear()  # Clear the previous list of green-colored items
+
+    for i in secondary_listbox.curselection():
+        secondary_listbox.itemconfig(i, {'fg': 'green'})  # Set the selected item to green
+        green_items.append(i)  # Clear the previous list of green-colored items
+
+  
+
+  
+def Clear_selection1():
+    
+    global primary_selections, green_items2
     primary_selections = [primary_listbox.select_clear(i) for i in primary_listbox.curselection()]
+   
+    for i in green_items2:
+        primary_listbox.itemconfig(i, {'fg': 'black'})
+        
+        green_items2.clear() 
+        
+       
+        
+def Clear_selection2():
+    
+    global secondary_selections,green_items
+ 
     secondary_selections = [secondary_listbox.select_clear(i) for i in secondary_listbox.curselection()]
-# Function to save the configuration to a file
+    
+    for i in green_items:
+        secondary_listbox.itemconfig(i, {'fg': 'black'}) 
+    green_items.clear()
+    
+
 def save_configuration():
     config = {
         'primary_parameters': primary_selections,
         'secondary_parameters': secondary_selections,
         'show_max': show_max_var.get(),
         'show_min': show_min_var.get(),
-        'show_avg': show_avg_var.get()
+        'show_avg': show_avg_var.get(),
     }
     file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
     if file_path:
@@ -112,16 +148,18 @@ def plot_selected_parameters():
         ax2 = ax1.twinx() if secondary_selections else None
         
         # Set tick parameters for primary axis
-        ax1.tick_params(axis='both', which='major', labelsize=14)  # Font size for primary y-axis ticks
-        ax1.tick_params(axis='x', labelsize=14)  # Font size for x-axis ticks
-
+        ax1.tick_params(axis='both', which='major', labelsize=16)  # Font size for primary y-axis ticks
+        ax1.tick_params(axis='x', labelsize=16)  # Font size for x-axis ticks
+        
+      
         if ax2:
-            ax2.tick_params(axis='both', which='major', labelsize=14)  # Font size for secondary y-axis ticks
+            ax2.tick_params(axis='both', which='major', labelsize=16)  # Font size for secondary y-axis ticks
 
-        chart_title = chart_title_entry.get() if chart_title_entry.get() else "Default Title"  # Fallback to default
+        chart_title = chart_title_entry.get() if chart_title_entry.get() else "Title"
         
         # Plot primary parameters
         for param in primary_selections:
+            
             if param in df.columns:
                 data = df[param]
                 label = param
@@ -134,6 +172,7 @@ def plot_selected_parameters():
                 ax1.plot(x_data, data, label=label)  # Use x_data for the x-axis
 
         if ax2:
+          
             for param in secondary_selections:
                 if param in df.columns:
                     data = df[param]
@@ -152,14 +191,15 @@ def plot_selected_parameters():
 
             ax1.set_title(chart_title, fontsize=16)
             ax1.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=14)  # Set xlabel font size
-            ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 9})
-            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
+            ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 10})
+            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
             
         else:
+            
             ax1.grid(True)  # Add grid for the single y-axis plot
-            ax1.set_title('Plot', fontsize=16)
+            ax1.set_title(chart_title, fontsize=16)
             ax1.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=14)  # Set xlabel font size
-            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
+            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
 
         plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
@@ -254,8 +294,8 @@ def plot_from_configurations():
 
                         # Add grids and legends for both axes
                         ax.grid(True)
-                        ax.legend(loc='center right', bbox_to_anchor=(-0.08, 0.7), prop={'size': 9})
-                        ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
+                        ax.legend(loc='center right', bbox_to_anchor=(-0.08, 0.7), prop={'size': 10})
+                        ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
 
                         # Set y-labels fontsize
                         ax.set_ylabel('', fontsize=12)
@@ -263,16 +303,16 @@ def plot_from_configurations():
 
                     else:
                         ax.grid(True)
-                        ax.legend(loc='center right', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
+                        ax.legend(loc='center right', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
 
                     # Set the title for each subplot
                     ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=14)
 
                     # Set tick parameters for both axes
-                    ax.tick_params(axis='both', which='major', labelsize=14)  # Font size for primary y-axis ticks
-                    ax.tick_params(axis='x', labelsize=14)  # Font size for x-axis ticks
+                    ax.tick_params(axis='both', which='major', labelsize=16)  # Font size for primary y-axis ticks
+                    ax.tick_params(axis='x', labelsize=16)  # Font size for x-axis ticks
                     if ax2:
-                        ax2.tick_params(axis='both', which='major', labelsize=14)  # Font size for secondary y-axis ticks
+                        ax2.tick_params(axis='both', which='major', labelsize=16)  # Font size for secondary y-axis ticks
 
                     # Set x-axis label
                     ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=12)  # Set xlabel fontsize
@@ -296,7 +336,7 @@ root = tk.Tk()
 root.title('Data Plotter')
 
 # Set the window size
-root.geometry('400x800')
+root.geometry('400x700')
 
 
 
@@ -313,8 +353,10 @@ show_max_checkbox = tk.Checkbutton(root, text=" Max", variable=show_max_var, fon
 show_min_checkbox = tk.Checkbutton(root, text=" Min", variable=show_min_var, font=small_font)
 show_avg_checkbox = tk.Checkbutton(root, text=" Avg", variable=show_avg_var, font=small_font)
 
+
+
 # Add buttons with smaller dimensions
-load_button = Button(root, text="Load File", command=load_file, width=15, height=1, font=small_font, bg='lightblue')
+load_button = Button(root, text="Load Log", command=load_file, width=15, height=1, font=small_font, bg='lightblue')
 load_button.pack(pady=5)
 
 primary_frame = tk.Frame(root)
@@ -324,8 +366,15 @@ primary_frame.pack(pady=5)
 primary_listbox = tk.Listbox(primary_frame, selectmode=tk.MULTIPLE, width=30, height=10, bg='white')
 primary_listbox.pack(side=tk.RIGHT, expand=True, fill='both')
 
-save_primary_button = Button(primary_frame, text="Save Axis 1", command=save_primary_selection, width=15, height=1, font=small_font, bg='orange')
-save_primary_button.pack(side=tk.LEFT, padx=5)
+
+# Save Button for Axis 1
+save_primary_button = Button(primary_frame, text="Save Axis 1", command=save_primary_selection, width=15, height=1, font=small_font, bg='lightblue')
+save_primary_button.pack(side=tk.TOP, pady=5)  # Stack vertically (top) with padding
+
+# Clear selection Button for Axis 1
+clear_selection_button1 = Button(primary_frame, text="Clear Axis 1", command=Clear_selection1, width=15, height=1, font=small_font, bg='red')
+clear_selection_button1.pack(side=tk.TOP, pady=5)  # Stack below save button with padding
+
 
 # Secondary Listbox and Save Button
 secondary_frame = tk.Frame(root)
@@ -335,15 +384,17 @@ secondary_frame.pack(pady=5)
 secondary_listbox = tk.Listbox(secondary_frame, selectmode=tk.MULTIPLE, width=30, height=10, bg='white')
 secondary_listbox.pack(side=tk.RIGHT, expand=True, fill='both')
 
-save_secondary_button = Button(secondary_frame, text="Save Axis 2", command=save_secondary_selection, width=15, height=1, font=small_font, bg='orange')
-save_secondary_button.pack(side=tk.LEFT, padx=5)
+# Save Button for Axis 2
+save_secondary_button = Button(secondary_frame, text="Save Axis 2", command=save_secondary_selection, width=15, height=1, font=small_font, bg='lightblue')
+save_secondary_button.pack(side=tk.TOP, pady=5)  # Pack with padding along the Y-axis (vertical)
 
-# Clear selection Button
-clear_selection_button = Button(root, text="Clear saved axis", command=Clear_selection, width=20, height=1, font=small_font, bg='red')
-clear_selection_button.pack(pady=5)
+# Clear selection Button for Axis 2
+clear_selection_button = Button(secondary_frame, text="Clear Axis 2", command=Clear_selection2, width=15, height=1, font=small_font, bg='red')
+clear_selection_button.pack(side=tk.TOP, pady=5)  # Pack below the save button with padding
+
 
 # Create and place the label and entry box for chart title
-chart_title_label = Label(root, text="Enter Chart Title:")
+chart_title_label = Label(root, text="------------------------------------------------------------------\n" "\nEnter Chart Title:")
 chart_title_label.pack(pady=10)  # Adjust padding for spacing
 
 chart_title_entry = Entry(root, width=40)  # Adjust the width as needed
