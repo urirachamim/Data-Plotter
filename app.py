@@ -110,6 +110,13 @@ def plot_selected_parameters():
 
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx() if secondary_selections else None
+        
+        # Set tick parameters for primary axis
+        ax1.tick_params(axis='both', which='major', labelsize=14)  # Font size for primary y-axis ticks
+        ax1.tick_params(axis='x', labelsize=14)  # Font size for x-axis ticks
+
+        if ax2:
+            ax2.tick_params(axis='both', which='major', labelsize=14)  # Font size for secondary y-axis ticks
 
         chart_title = chart_title_entry.get() if chart_title_entry.get() else "Default Title"  # Fallback to default
         
@@ -143,22 +150,23 @@ def plot_selected_parameters():
             ax1.grid(True)
             #ax2.grid(True)  # Add grid for the secondary y-axis
 
-            ax1.set_title(chart_title)
-            ax1.set_xlabel(f'Time [{ "Sec" if is_minute else "Sec" }]')  # Set xlabel based on log length
-            ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
-            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+            ax1.set_title(chart_title, fontsize=16)
+            ax1.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=14)  # Set xlabel font size
+            ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 9})
+            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
             
         else:
             ax1.grid(True)  # Add grid for the single y-axis plot
-            ax1.set_title('Plot')
-            ax1.set_xlabel(f'Time [{ "Sec" if is_minute else "Sec" }]')  # Set xlabel based on log length
-            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+            ax1.set_title('Plot', fontsize=16)
+            ax1.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=14)  # Set xlabel font size
+            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
 
         plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
         
     else:
         messagebox.showerror("Error", "No excel file loaded.")
+
 
 def plot_from_configurations():
     if df is not None:  # Check if DataFrame is loaded
@@ -173,7 +181,7 @@ def plot_from_configurations():
             # Define color cycles for primary and secondary axes
             primary_colors = itertools.cycle(plt.cm.tab10.colors)  # Color cycle for primary axis
             secondary_colors = itertools.cycle(plt.cm.Set2.colors)  # Color cycle for secondary axis
-
+    
             # Iterate through each configuration file
             for idx, filepath in enumerate(filepaths):
                 ax = axs[idx]
@@ -222,6 +230,7 @@ def plot_from_configurations():
                         messagebox.showerror("Error", f"No valid primary data found in {filepath}")
 
                     # Create and plot on secondary axis if secondary parameters exist
+                    ax2 = None  # Initialize ax2
                     if secondary_params:
                         secondary_data = []
                         secondary_labels = []
@@ -245,17 +254,28 @@ def plot_from_configurations():
 
                         # Add grids and legends for both axes
                         ax.grid(True)
-                        #ax2.grid(True)
-                        ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]')  # Set xlabel based on log length
-                        ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
-                        ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 8})
+                        ax.legend(loc='center right', bbox_to_anchor=(-0.08, 0.7), prop={'size': 9})
+                        ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
+
+                        # Set y-labels fontsize
+                        ax.set_ylabel('', fontsize=12)
+                        ax2.set_ylabel('', fontsize=12)
+
                     else:
                         ax.grid(True)
-                        ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]')  # Set xlabel based on log length
-                        ax.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 8})
+                        ax.legend(loc='center right', bbox_to_anchor=(1.1, 0.7), prop={'size': 9})
 
                     # Set the title for each subplot
-                    ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=10)
+                    ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=14)
+
+                    # Set tick parameters for both axes
+                    ax.tick_params(axis='both', which='major', labelsize=14)  # Font size for primary y-axis ticks
+                    ax.tick_params(axis='x', labelsize=14)  # Font size for x-axis ticks
+                    if ax2:
+                        ax2.tick_params(axis='both', which='major', labelsize=14)  # Font size for secondary y-axis ticks
+
+                    # Set x-axis label
+                    ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=12)  # Set xlabel fontsize
 
             # Adjust the layout to prevent overlap
             plt.tight_layout()
@@ -264,6 +284,7 @@ def plot_from_configurations():
             messagebox.showerror("Error", "No JSON files selected.")
     else:
         messagebox.showerror("Error", "No data loaded.")
+
 
 
 
