@@ -6,9 +6,20 @@ import json
 import tkinter as tk
 import itertools
 from tkinter import ttk
+from io import BytesIO
+from PIL import Image 
+import win32clipboard
+import subprocess
+
+
+
+
+
 ###############################################################################
 # command to build exe -> pyinstaller --onefile --windowed --hidden-import=matplotlib.backends.backend_tkagg --hidden-import=matplotlib.backends.backend_agg --hidden-import=matplotlib._pylab_helpers app.py
 ##############################################################################
+
+
 
 
 # Global variables for dataframe and saved selections
@@ -33,14 +44,19 @@ def load_file():
         update_listboxes()
 
 # Function to update listboxes with column names
+# Function to update listboxes with column names
 def update_listboxes():
     global df
     if df is not None:
         primary_listbox.delete(0, 'end')
         secondary_listbox.delete(0, 'end')
+        
+        # Loop through columns and exclude "Time" if it exists
         for col in df.columns:
-            primary_listbox.insert('end', col)
-            secondary_listbox.insert('end', col)
+            if col != "Time":  # Exclude "Time" column
+                primary_listbox.insert('end', col)
+                secondary_listbox.insert('end', col)
+
 
 # Function to save selected parameters from the primary ListBox
 def save_primary_selection():
@@ -109,7 +125,7 @@ def save_configuration():
    # else:
         #messagebox.showerror("Error", "Configuration not saved.")
 
-import matplotlib.pyplot as plt
+
 
 def convert_time_to_seconds(time_str):
     # Split the time string into parts
@@ -131,37 +147,33 @@ def convert_time_to_seconds(time_str):
     total_seconds = (hours * 3600) + (minutes * 60) + seconds + (milliseconds / 1000)
     return total_seconds
 
-# Function to plot selected parameters from both ListBoxes
 def plot_selected_parameters():
     if df is not None:
-        # Example time log, replace with your actual data
         time_log = df['Time']  # Assuming 'Time' is the column in your DataFrame
-
-        # Convert time log to seconds using the defined function
         x_data = [convert_time_to_seconds(time_str) for time_str in time_log]
         
-        # Determine if the log length is in seconds or minutes
-        log_length_in_seconds = x_data[-1]  # Last entry to determine log length
-        is_minute = log_length_in_seconds > 60  # Assuming log length > 60 seconds means it's in minutes
+        # Fetch start and end times from the entries
+        start_time = float(start_time_entry.get()) if start_time_entry.get() else 0
+        end_time = float(end_time_entry.get()) if end_time_entry.get() else x_data[-1]
 
+        # Filter x_data and corresponding parameters within the specified range
+        x_data_filtered = [x for x in x_data if start_time <= x <= end_time]
+        start_index = x_data.index(x_data_filtered[0]) if x_data_filtered else 0
+        end_index = x_data.index(x_data_filtered[-1]) + 1 if x_data_filtered else len(x_data)
+        
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx() if secondary_selections else None
         
         # Set tick parameters for primary axis
-        ax1.tick_params(axis='both', which='major', labelsize=16)  # Font size for primary y-axis ticks
-        ax1.tick_params(axis='x', labelsize=16)  # Font size for x-axis ticks
-        
-      
-        if ax2:
-            ax2.tick_params(axis='both', which='major', labelsize=16)  # Font size for secondary y-axis ticks
+        ax1.tick_params(axis='both', which='major', labelsize=16)
+        ax1.tick_params(axis='x', labelsize=16)
 
         chart_title = chart_title_entry.get() if chart_title_entry.get() else "Title"
-        
-        # Plot primary parameters
+
+        # Plot primary parameters within the time range
         for param in primary_selections:
-            
             if param in df.columns:
-                data = df[param]
+                data = df[param][start_index:end_index]  # Filter data within the range
                 label = param
                 if show_max_var.get():
                     label += f'\nMax: {data.max():.2f}'
@@ -169,13 +181,12 @@ def plot_selected_parameters():
                     label += f'\nMin: {data.min():.2f}'
                 if show_avg_var.get():
                     label += f'\nAvg: {data.mean():.2f}'
-                ax1.plot(x_data, data, label=label)  # Use x_data for the x-axis
+                ax1.plot(x_data_filtered, data, label=label)
 
         if ax2:
-          
             for param in secondary_selections:
                 if param in df.columns:
-                    data = df[param]
+                    data = df[param][start_index:end_index]  # Filter data within the range
                     label = param
                     if show_max_var.get():
                         label += f'\nMax: {data.max():.2f}'
@@ -183,33 +194,45 @@ def plot_selected_parameters():
                         label += f'\nMin: {data.min():.2f}'
                     if show_avg_var.get():
                         label += f'\nAvg: {data.mean():.2f}'
-                    ax2.plot(x_data, data, linestyle='--', label=label)  # Use x_data for the x-axis
+                    ax2.plot(x_data_filtered, data, linestyle='--', label=label)
 
-            # Add grid to both y-axes
             ax1.grid(True)
-            #ax2.grid(True)  # Add grid for the secondary y-axis
-
             ax1.set_title(chart_title, fontsize=16)
-            ax1.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=14)  # Set xlabel font size
-            ax1.legend(loc='center right', bbox_to_anchor=(-0.04, 0.7), prop={'size': 10})
-            ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
+            ax1.set_xlabel(f'Time [Sec]', fontsize=14)
+
+            # Legend positioning
+            handles1, labels1 = ax1.get_legend_handles_labels()
+            handles2, labels2 = ax2.get_legend_handles_labels() if ax2 else ([], [])
+            ax1.legend(handles=handles1, loc='upper center', bbox_to_anchor=(0.25, -0.2), ncol=1, prop={'size': 10})
+            ax2.legend(handles=handles2, loc='upper center', bbox_to_anchor=(0.75, -0.2), ncol=1, prop={'size': 10})
             
         else:
-            
-            ax1.grid(True)  # Add grid for the single y-axis plot
+            ax1.grid(True)
             ax1.set_title(chart_title, fontsize=16)
-            ax1.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=14)  # Set xlabel font size
-            ax1.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
+            ax1.set_xlabel(f'Time [Sec]', fontsize=14)
+            ax1.legend(loc='upper center', bbox_to_anchor=(0.75, -0.2), ncol=1, prop={'size': 10})
 
-        plt.subplots_adjust(left=0.15, bottom=0.1, right=0.75, top=0.9, wspace=0.2, hspace=0.2)
+        plt.subplots_adjust(left=0.15, bottom=0.3, right=0.85, top=0.9, wspace=0.2, hspace=0.2)
         plt.show()
         
     else:
-        messagebox.showerror("Error", "No excel file loaded.")
+        messagebox.show
+
+
 
 
 def plot_from_configurations():
     if df is not None:  # Check if DataFrame is loaded
+        # Get start and end times from user input (assuming these entries exist in your UI)
+        try:
+            start_time = float(start_time_entry.get())
+        except ValueError:
+            start_time = 0  # Default to 0 if input is invalid
+        try:
+            end_time = float(end_time_entry.get())
+        except ValueError:
+            end_time = df['Time'].apply(convert_time_to_seconds).max()  # Default to max time if input is invalid
+
         filepaths = filedialog.askopenfilenames(filetypes=[("JSON files", "*.json")])
         if filepaths:
             num_configs = len(filepaths)
@@ -219,10 +242,9 @@ def plot_from_configurations():
                 axs = [axs]  # Ensure axs is always a list even for one subplot
 
             # Define color cycles for primary and secondary axes
-            primary_colors = itertools.cycle(plt.cm.tab10.colors)  # Color cycle for primary axis
-            secondary_colors = itertools.cycle(plt.cm.Set2.colors)  # Color cycle for secondary axis
-    
-            # Iterate through each configuration file
+            primary_colors = itertools.cycle(plt.cm.tab10.colors)
+            secondary_colors = itertools.cycle(plt.cm.Set2.colors)
+
             for idx, filepath in enumerate(filepaths):
                 ax = axs[idx]
 
@@ -239,18 +261,16 @@ def plot_from_configurations():
                     if x_param not in df.columns:
                         messagebox.showerror("Error", f"{x_param} not found in data.")
                         return
-                    x_data = df[x_param].apply(convert_time_to_seconds)  # Ensure x_data is processed correctly
+                    x_data = df[x_param].apply(convert_time_to_seconds)
 
-                    # Determine if the log length is in seconds or minutes
-                    log_length_in_seconds = x_data.iloc[-1]  # Last entry to determine log length
-                    is_minute = log_length_in_seconds > 60  # Assuming log length > 60 seconds means it's in minutes
+                    # Apply start and end time filters to x_data and corresponding parameter data
+                    mask = (x_data >= start_time) & (x_data <= end_time)
+                    x_data_filtered = x_data[mask]
 
-                    # Process and store data for primary parameters
-                    primary_data = []
-                    primary_labels = []
+                    # Filter and plot primary parameters
                     for param in primary_params:
                         if param in df.columns:
-                            data = df[param]
+                            data = df[param][mask]  # Filter data using mask
                             label = param
                             if show_max:
                                 label += f'\nMax: {data.max():.2f}'
@@ -258,25 +278,16 @@ def plot_from_configurations():
                                 label += f'\nMin: {data.min():.2f}'
                             if show_avg:
                                 label += f'\nAvg: {data.mean():.2f}'
-                            primary_labels.append(label)
-                            primary_data.append(data)
+                            color = next(primary_colors)
+                            ax.plot(x_data_filtered, data, label=label, color=color)
 
-                    # Plot the primary parameters on ax
-                    if primary_data:
-                        for data, label in zip(primary_data, primary_labels):
-                            color = next(primary_colors)  # Get the next color for primary axis
-                            ax.plot(x_data, data, label=label, color=color)  # Use x_data for x-axis
-                    else:
-                        messagebox.showerror("Error", f"No valid primary data found in {filepath}")
-
-                    # Create and plot on secondary axis if secondary parameters exist
-                    ax2 = None  # Initialize ax2
+                    # Filter and plot secondary parameters if any
+                    ax2 = None
                     if secondary_params:
-                        secondary_data = []
-                        secondary_labels = []
+                        ax2 = ax.twinx()
                         for param in secondary_params:
                             if param in df.columns:
-                                data = df[param]
+                                data = df[param][mask]
                                 label = param
                                 if show_max:
                                     label += f'\nMax: {data.max():.2f}'
@@ -284,41 +295,32 @@ def plot_from_configurations():
                                     label += f'\nMin: {data.min():.2f}'
                                 if show_avg:
                                     label += f'\nAvg: {data.mean():.2f}'
-                                secondary_labels.append(label)
-                                secondary_data.append(data)
+                                color = next(secondary_colors)
+                                ax2.plot(x_data_filtered, data, linestyle='--', label=label, color=color)
 
-                        ax2 = ax.twinx()  # Always create twin axis if secondary data exists
-                        for data, label in zip(secondary_data, secondary_labels):
-                            color = next(secondary_colors)  # Get the next color for secondary axis
-                            ax2.plot(x_data, data, linestyle='--', label=label, color=color)  # Use x_data for x-axis
+                    # Position legends as specified
+                    handles1, labels1 = ax.get_legend_handles_labels()
+                    handles2, labels2 = (ax2.get_legend_handles_labels() if ax2 else ([], []))
+                    ax.legend(handles=handles1, loc='upper center', bbox_to_anchor=(0.25, -0.2), ncol=1, prop={'size': 8})
+                    if ax2:
+                        ax2.legend(handles=handles2, loc='upper center', bbox_to_anchor=(0.75, -0.2), ncol=1, prop={'size': 8})
 
-                        # Add grids and legends for both axes
-                        ax.grid(True)
-                        ax.legend(loc='center right', bbox_to_anchor=(-0.08, 0.7), prop={'size': 10})
-                        ax2.legend(loc='center left', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
-
-                        # Set y-labels fontsize
-                        ax.set_ylabel('', fontsize=12)
+                    ax.grid(True)
+                    ax.set_ylabel('', fontsize=12)
+                    if ax2:
                         ax2.set_ylabel('', fontsize=12)
 
-                    else:
-                        ax.grid(True)
-                        ax.legend(loc='center right', bbox_to_anchor=(1.1, 0.7), prop={'size': 10})
-
-                    # Set the title for each subplot
+                    # Set title and x-axis label
                     ax.set_title(f'{os.path.splitext(os.path.basename(filepath))[0]}', fontsize=14)
+                    ax.set_xlabel(f'Time [Sec]', fontsize=12)
 
                     # Set tick parameters for both axes
-                    ax.tick_params(axis='both', which='major', labelsize=16)  # Font size for primary y-axis ticks
-                    ax.tick_params(axis='x', labelsize=16)  # Font size for x-axis ticks
+                    ax.tick_params(axis='both', which='major', labelsize=16)
+                    ax.tick_params(axis='x', labelsize=16)
                     if ax2:
-                        ax2.tick_params(axis='both', which='major', labelsize=16)  # Font size for secondary y-axis ticks
+                        ax2.tick_params(axis='both', which='major', labelsize=16)
 
-                    # Set x-axis label
-                    ax.set_xlabel(f'Time [{"Sec" if is_minute else "Sec"}]', fontsize=12)  # Set xlabel fontsize
-
-            # Adjust the layout to prevent overlap
-            plt.tight_layout()
+            plt.subplots_adjust(left=0.15, bottom=0.3, right=0.85, top=0.9, hspace=0.3)
             plt.show()
         else:
             messagebox.showerror("Error", "No JSON files selected.")
@@ -332,11 +334,12 @@ def plot_from_configurations():
 
 
 
+
 root = tk.Tk()
 root.title('Data Plotter')
 
 # Set the window size
-root.geometry('400x700')
+root.geometry('400x800')
 
 
 
@@ -344,9 +347,9 @@ root.geometry('400x700')
 small_font = font.Font(size=10, weight="bold")
 
 # Define the variables to track checkbox states
-show_max_var = tk.BooleanVar(value=True)
-show_min_var = tk.BooleanVar(value=True)
-show_avg_var = tk.BooleanVar(value=True)
+show_max_var = tk.BooleanVar(value=False)
+show_min_var = tk.BooleanVar(value=False)
+show_avg_var = tk.BooleanVar(value=False)
 
 # Create checkboxes and link them to the variables
 show_max_checkbox = tk.Checkbutton(root, text=" Max", variable=show_max_var, font=small_font)
@@ -400,6 +403,21 @@ chart_title_label.pack(pady=10)  # Adjust padding for spacing
 chart_title_entry = Entry(root, width=40)  # Adjust the width as needed
 chart_title_entry.pack(pady=5)
 
+Timeframe_lable = Label(root, text=" Chart Time Frame [sec]")
+Timeframe_lable.pack(pady=10)
+
+start_time_label = tk.Label(root, text="Start Time")
+start_time_label.pack()
+start_time_entry = tk.Entry(root)
+start_time_entry.pack()
+
+end_time_label = tk.Label(root, text="End Time")
+end_time_label.pack()
+end_time_entry = tk.Entry(root)
+end_time_entry.pack()
+
+
+
 # Plot parameter Button
 plot_button = Button(root, text="Create Chart", command=plot_selected_parameters, width=20, height=1, font=small_font, bg='lightgreen')
 plot_button.pack(pady=5)
@@ -409,8 +427,13 @@ save_config_button = Button(root, text="Save Chart Config", command=save_configu
 save_config_button.pack(pady=5)
 
 # Load saved plot Button
-plot_config_button = Button(root, text="Load Chart", command=plot_from_configurations, width=20, height=1, font=small_font, bg='lightblue')
+plot_config_button = Button(root, text="Load Chart Config", command=plot_from_configurations, width=20, height=1, font=small_font, bg='lightblue')
 plot_config_button.pack(pady=5)
+
+
+
+
+
 
 # Place the checkboxes at the bottom
 show_max_checkbox.pack()
